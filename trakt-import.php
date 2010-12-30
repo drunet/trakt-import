@@ -41,13 +41,6 @@ for($i = 0; $i < sizeof($movies_matches[0]); $i++) {
 
 //add seen
 echo sizeof($movies_seen) . " watched movies\n";
-
-echo json_encode(array(
-	'username' => TRAKT_USERNAME,
-	'password' => sha1(TRAKT_PASSWORD),
-	'movies' => array_slice($movies_seen, $offset, BATCH_SIZE)
-));
-
 $offset = 0;
 while($offset < sizeof($movies_seen)) {
 	$ch = curl_init();
