@@ -89,7 +89,7 @@ while($offset < sizeof($movies_library)) {
 }
 
 //debug
-echo "\nSummary ==========\n\nMovies missing titles: " . sizeof($missing_title) . "\n";
+echo "\n##############################\n\nMovies missing titles: " . sizeof($missing_title) . "\n";
 foreach($missing_title as $movie) {
 	echo "\t" . $movie['title'] . "\n";
 }
@@ -101,5 +101,5 @@ echo "\nMovies missing imdb ids: " . sizeof($missing_imdb) . "\n";
 foreach($missing_imdb as $movie) {
 	echo "\t\t".$movie['title']."\n";
 }
-echo "\n===============\n";
+echo "\n##############################\n";
 ?>
