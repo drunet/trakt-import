@@ -1,0 +1,10 @@
+http://trakt.tv
+
+This PHP script is a proof of concept XBMC library import to trakt. It uses the XBMC HTTP API to query your movies, determine which ones have been watched, and submit the data to trakt.
+
+You can get your trakt API key:
+	http://trakt.tv/settings/api
+
+More info on the trakt API calls can be found:
+	http://dev.trakt.tv/api-docs/movie-seen
+	http://dev.trakt.tv/api-docs/movie-library
