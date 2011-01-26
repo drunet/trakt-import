@@ -11,9 +11,84 @@ define('TRAKT_PASSWORD', 'password');
 ########## leave this alone
 
 error_reporting(E_ALL);
-define('BATCH_SIZE', 15);
+define('BATCH_SIZE', 1000);
+
+//get shows
+echo "========\nTV SHOWS\n========\n\n";
+$ch = curl_init();
+curl_setopt_array($ch, array(
+	CURLOPT_URL => 'http://' . XBMC_USERNAME . ':' . XBMC_PASSWORD . '@' . XBMC_IP . ':' . XBMC_PORT . '/xbmcCmds/xbmcHttp?command=QueryVideoDatabase(' . urlencode('SELECT idShow, c00, c12, c05 FROM tvshow ORDER BY c00 ASC') . ')',
+	CURLOPT_RETURNTRANSFER => 1
+));
+$shows_raw = curl_exec($ch);
+preg_match_all('/<field>([^<]*)<\/field><field>([^<]*)<\/field><field>([^<]*)<\/field><field>([^<]*)<\/field>/', $shows_raw, $shows_matches);
+
+for($i = 0; $i < sizeof($shows_matches[0]); $i++) {
+	//get episodes
+	$ch = curl_init();
+	curl_setopt_array($ch, array(
+		CURLOPT_URL => 'http://' . XBMC_USERNAME . ':' . XBMC_PASSWORD . '@' . XBMC_IP . ':' . XBMC_PORT . '/xbmcCmds/xbmcHttp?command=QueryVideoDatabase(' . urlencode('SELECT c12, c13, playCount FROM episodeview WHERE idShow = ' . $shows_matches[1][$i]) . ')',
+		CURLOPT_RETURNTRANSFER => 1
+	));
+	$episodes_raw = curl_exec($ch);
+	preg_match_all('/<field>([^<]*)<\/field><field>([^<]*)<\/field><field>([^<]*)<\/field>/', $episodes_raw, $episodes_matches);
+		
+	$episodes_library = array();
+	$episodes_seen = array();
+	
+	for($j = 0; $j < sizeof($episodes_matches[0]); $j++) {
+		$a = array(
+			'season' => $episodes_matches[1][$j],
+			'episode' => $episodes_matches[2][$j],
+			'plays' => intval($episodes_matches[3][$j])
+		);
+		if($a['plays'] > 0) {
+			$episodes_seen[] = $a;
+		}
+		$episodes_library[] = $a;
+	}
+		
+	$data = array(
+		'username' => TRAKT_USERNAME,
+		'password' => sha1(TRAKT_PASSWORD),
+		'title' => $shows_matches[2][$i],
+		'tvdb_id' => $shows_matches[3][$i],
+		'year' => date('Y', strtotime($shows_matches[4][$i])),
+		'episodes' => $episodes_seen
+	);
+	
+	echo $shows_matches[2][$i] . "\n";
+	
+	//add seen
+	if(!empty($episodes_seen)) {
+		$ch = curl_init();
+		curl_setopt_array($ch, array(
+			CURLOPT_URL => 'http://api.trakt.tv/show/episode/seen/' . TRAKT_APIKEY,
+			CURLOPT_POSTFIELDS => json_encode($data),
+			CURLOPT_POST => 1,
+			CURLOPT_RETURNTRANSFER => 1,
+			CURLOPT_TIMEOUT => 0
+		));
+		echo "\tseen: " . curl_exec($ch) . "\n";
+	}
+	
+	//add to library
+	if(!empty($episodes_library)) {
+		$data['episodes'] = $episodes_library;
+		$ch = curl_init();
+		curl_setopt_array($ch, array(
+			CURLOPT_URL => 'http://api.trakt.tv/show/episode/library/' . TRAKT_APIKEY,
+			CURLOPT_POSTFIELDS => json_encode($data),
+			CURLOPT_POST => 1,
+			CURLOPT_RETURNTRANSFER => 1,
+			CURLOPT_TIMEOUT => 0
+		));
+		echo "\tlibrary: " . curl_exec($ch) . "\n";
+	}
+}
 
 //get movies
+echo "\n\n======MOVIES======\n\n";
 $ch = curl_init();
 curl_setopt_array($ch, array(
 	CURLOPT_URL => 'http://' . XBMC_USERNAME . ':' . XBMC_PASSWORD . '@' . XBMC_IP . ':' . XBMC_PORT . '/xbmcCmds/xbmcHttp?command=QueryVideoDatabase(' . urlencode('SELECT c09, c00, c07, playCount, lastPlayed FROM movieview') . ')',
@@ -39,13 +114,7 @@ for($i = 0; $i < sizeof($movies_matches[0]); $i++) {
 	if($a['plays'] > 0) {
 		$movies_seen[] = $a;
 	}
-	else {
-		$movies_library[] = $a;
-	}
-	
-	if(empty($a['imdb_id'])) $missing_imdb[] = $a;
-	if(empty($a['title'])) $missing_title[] = $a;
-	if(empty($a['year'])) $missing_year[] = $a;
+	$movies_library[] = $a;
 }
 
 //add seen
@@ -69,7 +138,7 @@ while($offset < sizeof($movies_seen)) {
 }
 
 //add to library
-echo sizeof($movies_library) . " unwatched movies\n";
+echo sizeof($movies_library) . " movies in your library\n";
 $offset = 0;
 while($offset < sizeof($movies_library)) {
 	$ch = curl_init();
@@ -87,19 +156,4 @@ while($offset < sizeof($movies_library)) {
 	echo "\t" . $offset . '-' . ($offset + BATCH_SIZE) . ' ' . curl_exec($ch) . "\n";
 	$offset += BATCH_SIZE;
 }
-
-//debug
-echo "\n##############################\n\nMovies missing titles: " . sizeof($missing_title) . "\n";
-foreach($missing_title as $movie) {
-	echo "\t" . $movie['title'] . "\n";
-}
-echo "\nMovies missing years: " . sizeof($missing_year) . "\n";
-foreach($missing_year as $movie) {
-	echo "\t" . $movie['title'] . "\n";
-}
-echo "\nMovies missing imdb ids: " . sizeof($missing_imdb) . "\n";
-foreach($missing_imdb as $movie) {
-	echo "\t\t".$movie['title']."\n";
-}
-echo "\n##############################\n";
 ?>
