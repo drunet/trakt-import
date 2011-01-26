@@ -8,5 +8,7 @@ You can get your trakt API key:
 More info on the trakt API calls can be found:
 	http://dev.trakt.tv/api-docs/movie-seen
 	http://dev.trakt.tv/api-docs/movie-library
+	http://dev.trakt.tv/api-docs/show-episode-seen
+	http://dev.trakt.tv/api-docs/show-episode-library
 
 NOTE: This script should technically work on boxee and plex since they use the XBMC HTTP API as well.
